@@ -1,0 +1,211 @@
+{
+  "colecciones": [
+    {
+      "nombre": "servicios_principales",
+      "documentos": [
+        {
+          "_id": "S01",
+          "nombre": "PODA"
+        },
+        {
+          "_id": "S02",
+          "nombre": "COSECHA"
+        },
+        {
+          "_id": "S03",
+          "nombre": "BARRIDO DE HOJAS"
+        }
+      ]
+    },
+    {
+      "nombre": "servicios_secundarios",
+      "documentos": [
+        {
+          "_id": "SS01",
+          "nombre": "Podadora 1",
+          "pertenece_a": "S01"
+        },
+        {
+          "_id": "SS02",
+          "nombre": "Podadora 2",
+          "pertenece_a": "S01"
+        },
+        {
+          "_id": "SS03",
+          "nombre": "Podadora 3",
+          "pertenece_a": "S01"
+        },
+        {
+          "_id": "SS04",
+          "nombre": "Podadora 4",
+          "pertenece_a": "S01"
+        },
+        {
+          "_id": "SS05",
+          "nombre": "Podadora 5",
+          "pertenece_a": "S01"
+        },
+        {
+          "_id": "SS06",
+          "nombre": "Podadora 6",
+          "pertenece_a": "S01"
+        },
+        {
+          "_id": "SS07",
+          "nombre": "Podadora 7",
+          "pertenece_a": "S01"
+        },
+        {
+          "_id": "SS08",
+          "nombre": "Podadora 8",
+          "pertenece_a": "S01"
+        },
+        {
+          "_id": "SS09",
+          "nombre": "Podadora 9",
+          "pertenece_a": "S01"
+        },
+        {
+          "_id": "SS10",
+          "nombre": "Podadora 10",
+          "pertenece_a": "S01"
+        },
+        {
+          "_id": "SS11",
+          "nombre": "NOGALES",
+          "pertenece_a": "S02"
+        },
+        {
+          "_id": "SS12",
+          "nombre": "CIRUELO",
+          "pertenece_a": "S02"
+        },
+        {
+          "_id": "SS13",
+          "nombre": "AVELLANO",
+          "pertenece_a": "S02"
+        },
+        {
+          "_id": "SS14",
+          "nombre": "ALMENDRA",
+          "pertenece_a": "S02"
+        },
+        {
+          "_id": "SS15",
+          "nombre": "Barredora 1",
+          "pertenece_a": "S03"
+        },
+        {
+          "_id": "SS16",
+          "nombre": "Barredora 2",
+          "pertenece_a": "S03"
+        },
+        {
+          "_id": "SS17",
+          "nombre": "Barredora 3",
+          "pertenece_a": "S03"
+        },
+        {
+          "_id": "SS18",
+          "nombre": "Barredora 4",
+          "pertenece_a": "S03"
+        },
+        {
+          "_id": "SS19",
+          "nombre": "Barredora 5",
+          "pertenece_a": "S03"
+        },
+        {
+          "_id": "SS20",
+          "nombre": "Barredora 6",
+          "pertenece_a": "S03"
+        },
+        {
+          "_id": "SS21",
+          "nombre": "Barredora 7",
+          "pertenece_a": "S03"
+        },
+        {
+          "_id": "SS22",
+          "nombre": "Barredora 8",
+          "pertenece_a": "S03"
+        },
+        {
+          "_id": "SS23",
+          "nombre": "Barredora 9",
+          "pertenece_a": "S03"
+        },
+        {
+          "_id": "SS24",
+          "nombre": "Barredora 10",
+          "pertenece_a": "S03"
+        }
+      ]
+    },
+    {
+      "nombre": "detalles_servicios",
+      "documentos": [
+        {
+          "_id": "D01",
+          "nombre": "Hileras",
+          "tipo": "hileras",
+          "aplica_a": ["SS01", "SS02", "SS03", "SS04", "SS05", "SS06", "SS07", "SS08", "SS09", "SS10"],
+          "opciones": [
+            {
+              "_id": "H01",
+              "nombre": "Cada 1 Hilera"
+            },
+            {
+              "_id": "H02",
+              "nombre": "Cada 2 Hileras"
+            },
+            {
+              "_id": "H03",
+              "nombre": "Cada 3 Hileras"
+            },
+            {
+              "_id": "H04",
+              "nombre": "Cada 4 Hileras"
+            }
+          ]
+        },
+        {
+          "_id": "D02",
+          "nombre": "Caras",
+          "tipo": "caras",
+          "aplica_a": ["SS01", "SS02", "SS03", "SS04", "SS05", "SS06", "SS07", "SS08", "SS09", "SS10"],
+          "opciones": [
+            {
+              "_id": "C01",
+              "nombre": "Poda 1 Cara"
+            },
+            {
+              "_id": "C02",
+              "nombre": "Poda 3 Caras"
+            },
+            {
+              "_id": "C03",
+              "nombre": "Topping"
+            }
+          ]
+        },
+        {
+          "_id": "D03",
+          "nombre": "Pasadas",
+          "tipo": "pasadas",
+          "aplica_a": ["SS01", "SS02", "SS03", "SS04", "SS05", "SS06", "SS07", "SS08", "SS09", "SS10"],
+          "opciones": [
+            {
+              "_id": "P01",
+              "nombre": "1 Pasada"
+            },
+            {
+              "_id": "P02",
+              "nombre": "2 Pasadas"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

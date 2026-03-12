@@ -1,0 +1,300 @@
+{
+  "database": "taller_goharvest",
+  "colecciones": [
+    {
+      "nombre": "componentes_principales",
+      "documentos": [
+        {
+          "_id": "CP001",
+          "nombre": "MOTOR",
+          "tareas": [
+            "Revisar Estado de Motor",
+            "Revisar Alternador / Carga",
+            "Revisar Bomba de agua (eje y rodamiento)",
+            "Revisar Radiador fugas",
+            "Revisar Mangueras del Radiador (estado y apriete)",
+            "Revisar Bomba elevadora",
+            "Revisar Portafiltros (fugas y estado de portafiltros)",
+            "Limpieza de radiador",
+            "Agua de radiador",
+            "Enderesar panel del radiador",
+            "Revisar y probar inyectores",
+            "Revisar estado de correa de motor",
+            "Revisar rodamientos de tensores y poleas en el motor",
+            "Cambio de Filtros",
+            "Cambio de aceite de motor",
+            "Revisar estado de aspa del ventilador del radiador"
+          ]
+        },
+        {
+          "_id": "CP002",
+          "nombre": "CILINDROS",
+          "tareas": [
+            "En cada cilindro revisar",
+            "Revisar fugas en el cilindro",
+            "Revisar estado del vastago",
+            "Revisar estado de las tapas",
+            "Revisar estado del puño y de las orejas traseras",
+            "Revisar pasador (estado)",
+            "Revisar estado en toma de cilindro (en la maquina / fisuras o desgaste)",
+            "Si el cilindro se desarma (revisar estado de la botella)",
+            "Revisar estado de los niples",
+            "Revisar estado de los packing (si hay fuga)"
+          ]
+        },
+        {
+          "_id": "CP003",
+          "nombre": "ELECTRICIDAD"
+        },
+        {
+          "_id": "CP004",
+          "nombre": "HIDRÁULICA"
+        },
+        {
+          "_id": "CP005",
+          "nombre": "ESTRUCTURA"
+        },
+        {
+          "_id": "CP006",
+          "nombre": "GOMAS"
+        },
+        {
+          "_id": "CP007",
+          "nombre": "REPARACIONES"
+        }
+      ]
+    },
+    {
+      "nombre": "componentes_secundarios",
+      "documentos": [
+        {
+          "_id": "CS001",
+          "nombre": "MANGUERAS",
+          "pertenece_a": "CP004",
+          "tareas": [
+            "Revisar fugas en mangueras",
+            "Revisar Apriete de mangueras",
+            "Revisar O rings de mangueras",
+            "Revisar Mangueras que puedan rozar",
+            "Revisar y ordenar mangueras"
+          ]
+        },
+        {
+          "_id": "CS002",
+          "nombre": "BARREDORES",
+          "pertenece_a": "CP004",
+          "tareas": [
+            "Revisar fugas en motorin",
+            "Revisar y enderesar platos",
+            "Revisar y reparar dedos",
+            "Revisar y reparar seguros de conos",
+            "Revisar y reparar brazos de barredores"
+          ]
+        },
+        {
+          "_id": "CS003",
+          "nombre": "CABLES",
+          "pertenece_a": "CP003",
+          "tareas": [
+            "Revisar corriente en Bateria",
+            "Corriente en Chapa",
+            "Corriente en motor",
+            "Corriente en electrovalvulas",
+            "Corriente en alternador",
+            "Corriente en sensores del motor",
+            "Revisar estado de cables y protección de cables",
+            "Revisar chanchitos"
+          ]
+        },
+        {
+          "_id": "CS004",
+          "nombre": "BATERIA",
+          "pertenece_a": "CP003",
+          "tareas": [
+            "Revisar carga de bateria",
+            "Revisar bornes de bateria",
+            "Revisar fijación de la batería",
+            "Revisar cableado en la batería"
+          ]
+        },
+        {
+          "_id": "CS005",
+          "nombre": "MASAS",
+          "pertenece_a": "CP007",
+          "tareas": [
+            "Revisar estado de aceite de las masas",
+            "Cambio de aceite de masa",
+            "Revisar rodamiento (en caso de verse)",
+            "Cambio de reten de masa",
+            "Revisar fugas en motor de masa",
+            "Revisar retorno (prueba de salto) del motor",
+            "Revisar fugas y niples del motor de masa"
+          ]
+        },
+        {
+          "_id": "CS006",
+          "nombre": "NEUMÁTICO",
+          "pertenece_a": "CP006",
+          "tareas": [
+            "Revisar estado de los neumáticos",
+            "Revisar llantas estado de los bordes",
+            "Revisar estado de los pernos de rueda y tuercas",
+            "Revisar estado de 'ojos' de la llanta",
+            "Revisar que los neumáticos sean los mismos en la maquina"
+          ]
+        },
+        {
+          "_id": "CS007",
+          "nombre": "CINTAS",
+          "pertenece_a": "CP006",
+          "tareas": [
+            "Revisar estado de la cinta",
+            "Revisar estado de la cadena de la cinta",
+            "Revisar estado de las pletinas de la cinta",
+            "Revisar pernos de la cinta",
+            "Revisar estado de rodamientos de la cinta",
+            "Revisar estado de ejes",
+            "Revisar estado de piñones de tracción",
+            "Revisar estado de guias en los ejes",
+            "Revisar estado de piñones en los ejes",
+            "Revisar fugas en motorines de las cintas",
+            "Reparar fugas en motorines de las cintas",
+            "Revisar niples y conecciones motorin"
+          ]
+        },
+        {
+          "_id": "CS008",
+          "nombre": "SOPLADOR DE HOJAS",
+          "pertenece_a": "CP007",
+          "tareas": [
+            "Revisar estado de aspa del ventilador",
+            "Revisar estado de rodamiento del ventilador",
+            "Revisar estado de arañita",
+            "Revisar esatdo de acople de arañita",
+            "Revisar estado de motor del ventilador"
+          ]
+        },
+        {
+          "_id": "CS010",
+          "nombre": "TEFLON",
+          "pertenece_a": "CP007",
+          "tareas": [
+            "Revisar estado de teflones donde desliza la tenaza",
+            "Revisar estado de teflones de deslizamiento",
+            "Revisar estado de tapa de teflones",
+            "Cambio de teflones malos",
+            "Revisar teflones de las cintas",
+            "Estirar teflones de las cintas"
+          ]
+        },
+        {
+          "_id": "CS011",
+          "nombre": "PRESIONES",
+          "pertenece_a": "CP004",
+          "tareas": [
+            "Revisar presiones de bomba de pistones",
+            "Revisar flujo bomba de paletas",
+            "Revisar presiones de husco 3000",
+            "Revisar presiones de manillar",
+            "Revisar presiones manillar"
+          ]
+        },
+        {
+          "_id": "CS012",
+          "nombre": "JOYSTICK",
+          "pertenece_a": "CP003",
+          "tareas": [
+            "Revisar fugas de Joystick",
+            "Revisar señales eléctricas",
+            "Revisar botones buenos y malos",
+            "Ordenar botones"
+          ]
+        },
+        {
+          "_id": "CS013",
+          "nombre": "LUCES",
+          "pertenece_a": "CP003",
+          "tareas": [
+            "Revisar estado de focos",
+            "Revisar cableado de luces",
+            "Hacer protecciones para luces",
+            "Reparar luces mal puestas"
+          ]
+        },
+        {
+          "_id": "CS014",
+          "nombre": "ACEITE HIDRÁULICO",
+          "pertenece_a": "CP004",
+          "tareas": [
+            "Revisar estado de aceite hidráulico",
+            "Dializar aceite / Cabiar aceite",
+            "Rellenar aceite hidráulico",
+            "Limpieza de estanque con imán",
+            "Limpieza de estanque por la toma de petroleo"
+          ]
+        },
+        {
+          "_id": "CS015",
+          "nombre": "PETROLEO",
+          "pertenece_a": "CP004",
+          "tareas": [
+            "Limpieza de estanque con imán",
+            "Limpieza de estanque por la toma de petroleo"
+          ]
+        },
+        {
+          "_id": "CS016",
+          "nombre": "GOMAS",
+          "pertenece_a": "CP006",
+          "tareas": [
+            "Revisar gomas laterales con cada cuerpo",
+            "Revisar gomas de flipper",
+            "Revisar / Cambiar pletinas flipper",
+            "Revisar gomas radiador"
+          ]
+        },
+        {
+          "_id": "CS017",
+          "nombre": "TENAZA",
+          "pertenece_a": "CP005",
+          "tareas": [
+            "Revisar rodamientos de tenaza",
+            "Revisar puntos de engrase de la tenaza",
+            "Revisar alienación de las correas",
+            "Revisar rodamientos de poleas",
+            "Revisar pernos de los tensores",
+            "Revisar pasador trasero de tenaza",
+            "Revisar pernos de cubiertas",
+            "Revisar estado de cubiertas",
+            "Revisar estado de cojinetes",
+            "Revisar estado de teflones donde desliza la tenaza",
+            "Revisar figas del boak",
+            "Revisar estado de donas",
+            "Revisar estado de pernos y tuercas de donas",
+            "Revisar estado de golillas"
+          ]
+        },
+        {
+          "_id": "CS019",
+          "nombre": "PROTECCIONES / TAPAS",
+          "pertenece_a": "CP005",
+          "tareas": [
+            "Rivisar tapa de aceite",
+            "Revisar tapa de estanque de petróleo",
+            "Revisar / instalar tapa de protección de aciete",
+            "Revisar / instalar tapa de protección de petróleo"
+          ]
+        },
+        {
+          "_id": "CS020",
+          "nombre": "ESTRUCTURA",
+          "pertenece_a": "CP005",
+          "tareas": [
+            "Revisar fisuras (listar las que se reparen abajo)"
+          ]
+        }
+        
+      ]
+    }
+  ]
+}
