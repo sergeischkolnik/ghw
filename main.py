@@ -1,8 +1,14 @@
 import logging
 import json
 import unicodedata
+import asyncio
+import db
+import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler, CallbackQueryHandler
+import tempfile
+import os
+import json
 
 # conversation states
 TYPE_CHOICE, MACHINE_NAME, MACHINE_NUM, COMPONENT, SUBCOMPONENT, CHECKLIST, COMMENT_CHOICE, COMMENT_TEXT, PANAS_CHOICE, PANAS_TEXT, SERVICE_CLIENT_SEARCH, SERVICE_CLIENT_SELECT, SERVICE_SERVICE_SELECT, SERVICE_SUBSERVICE_SELECT, SERVICE_DETAIL_HILERAS, SERVICE_DETAIL_CARAS, SERVICE_DETAIL_PASADAS, SERVICE_HOROMETRO_INICIO, SERVICE_HOROMETRO_TERMINO, SERVICE_HECTAREAS, SERVICE_HOROMETRO_INICIO_CONFIRM, SERVICE_HOROMETRO_TERMINO_CONFIRM, SERVICE_HECTAREAS_CONFIRM, COMMENT_TEXT_CONFIRM, PANAS_TEXT_CONFIRM = range(25)
@@ -24,6 +30,87 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     return await workflow_start(update, context)
 
 
+async def export_workflows(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Admin command: export recent workflows. Usage: /export_workflows [taller|servicio|all] [limit]"""
+    args = context.args or []
+    typ = (args[0].lower() if len(args) >= 1 else 'all')
+    limit = int(args[1]) if len(args) >= 2 and args[1].isdigit() else 50
+
+    results = {}
+    if typ in ('taller', 'all'):
+        rows = await db.get_recent_taller_outputs(limit=limit)
+        results['taller_outputs'] = rows
+    if typ in ('servicio', 'all'):
+        rows = await db.get_recent_servicio_outputs(limit=limit)
+        results['servicio_outputs'] = rows
+
+    # write to temp file and send as document
+    import tempfile, io
+    payload = json.dumps(results, ensure_ascii=False, indent=2, default=str)
+    with tempfile.NamedTemporaryFile('w', delete=False, suffix='.json', encoding='utf-8') as tmp:
+        tmp.write(payload)
+        tmp_path = tmp.name
+
+    try:
+        if update.message:
+            await update.message.reply_document(open(tmp_path, 'rb'))
+        elif update.callback_query:
+            await update.callback_query.message.reply_document(open(tmp_path, 'rb'))
+    finally:
+        try:
+            os.remove(tmp_path)
+        except Exception:
+            pass
+
+
+async def simulate_taller(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Insert a simulated TALLER workflow into the DB for quick testing."""
+    now = datetime.datetime.now()
+    workflow = {
+        'type': 'TALLER',
+        'machine_name': 'Shaker (sim)',
+        'machine_num': '1',
+        'component_id': 'CP001',
+        'subcomponent_id': 'CS007',
+        'selected_indices': [0],
+        'current_items': ['Simulated task'],
+        'comment': 'Simulated workflow',
+        'panas': 'sim',
+        'start': now,
+        'end': now
+    }
+    try:
+        new_id = await db.insert_workflow_with_retry(workflow, user_id=update.effective_user.id)
+        await update.message.reply_text(f"Simulated TALLER saved (id={new_id})")
+    except Exception as e:
+        await update.message.reply_text(f"Simulation failed: {e}")
+
+
+async def simulate_servicio(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Insert a simulated SERVICIO workflow into the DB for quick testing."""
+    now = datetime.datetime.now()
+    client = (ALL_CLIENTS[0] if ALL_CLIENTS else 'SIM_CLIENT')
+    workflow = {
+        'type': 'SERVICIO',
+        'client': client,
+        'service': 'S_TEST',
+        'subservice': 'SS_TEST',
+        'details': {},
+        'horometro_inicio': '0',
+        'horometro_termino': '10',
+        'hectareas': '1',
+        'comment': 'Simulated servicio',
+        'panas': 'sim',
+        'start': now,
+        'end': now
+    }
+    try:
+        new_id = await db.insert_workflow_with_retry(workflow, user_id=update.effective_user.id)
+        await update.message.reply_text(f"Simulated SERVICIO saved (id={new_id})")
+    except Exception as e:
+        await update.message.reply_text(f"Simulation failed: {e}")
+
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle incoming messages and reply with hello."""
     await update.message.reply_text("hello")
@@ -41,18 +128,34 @@ MACHINE_NAMES = ["Shaker", "Barredora", "Recogedora", "SBS Shaker", "SBS Recibid
 
 MACHINE_NUMBERS = {str(i): f"Máquina {i}" for i in range(1, 11)}
 
-# Load component structure from JSON
-with open('components.json', 'r', encoding='utf-8') as f:
-    COMPONENTS_DATA = json.load(f)
-
-# Load clients from JSON
+# Load component structure and clients preferring DB, fallback to JSON files
 try:
-    with open('clients.json', 'r', encoding='utf-8') as f:
-        CLIENTS_DATA = json.load(f)
-        ALL_CLIENTS = CLIENTS_DATA.get('clients', [])
-except (FileNotFoundError, json.JSONDecodeError):
-    ALL_CLIENTS = []
-    logger.warning("Could not load clients.json, client search disabled")
+    COMPONENTS_DATA = db.get_components_sync()
+    if not COMPONENTS_DATA:
+        with open('components.json', 'r', encoding='utf-8') as f:
+            COMPONENTS_DATA = json.load(f)
+except Exception:
+    try:
+        with open('components.json', 'r', encoding='utf-8') as f:
+            COMPONENTS_DATA = json.load(f)
+    except Exception:
+        COMPONENTS_DATA = {'colecciones': []}
+
+# Load clients preferring DB
+try:
+    ALL_CLIENTS = db.get_clients_sync() or []
+    if not ALL_CLIENTS:
+        with open('clients.json', 'r', encoding='utf-8') as f:
+            CLIENTS_DATA = json.load(f)
+            ALL_CLIENTS = CLIENTS_DATA.get('clients', [])
+except Exception:
+    try:
+        with open('clients.json', 'r', encoding='utf-8') as f:
+            CLIENTS_DATA = json.load(f)
+            ALL_CLIENTS = CLIENTS_DATA.get('clients', [])
+    except (FileNotFoundError, json.JSONDecodeError):
+        ALL_CLIENTS = []
+        logger.warning("Could not load clients.json, client search disabled")
 
 # Load services from JSON
 try:
@@ -1503,10 +1606,30 @@ async def finish_workflow(query, context: ContextTypes.DEFAULT_TYPE, message=Non
     if data.get('panas'):
         summary += f"PANAS: {data['panas']}\n"
     
+    # Persist workflow to DB (attempt with retry and report id/errors to user)
+    db_result_msg = ''
+    try:
+        user_id = None
+        if query:
+            user = getattr(query, 'from_user', None)
+            if user:
+                user_id = getattr(user, 'id', None)
+        elif message:
+            user_id = getattr(message.from_user, 'id', None)
+        # use retrying wrapper
+        new_id = await db.insert_workflow_with_retry(data, user_id=user_id)
+        db_result_msg = f"\nGuardado en la base de datos (id={new_id})."
+    except Exception as e:
+        logger.exception("Failed to save workflow to DB: %s", e)
+        db_result_msg = "\nOcurrió un error al guardar en la base de datos."
+
     # Add restart button
     keyboard = [[InlineKeyboardButton("🔄 Comenzar nuevamente", callback_data="start_workflow")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
+    # append DB save result to summary
+    summary += db_result_msg
+
     if query:
         await query.edit_message_text(summary, reply_markup=reply_markup)
     else:
@@ -1517,10 +1640,24 @@ async def finish_workflow(query, context: ContextTypes.DEFAULT_TYPE, message=Non
 
 def main() -> None:
     """Start the bot."""
+    # Ensure database and tables exist before starting
+    try:
+        asyncio.run(db.init_db())
+        # run JSON->DB migration if files present
+        try:
+            asyncio.run(db.migrate_json_files_to_db())
+        except Exception:
+            logger.exception("JSON migration failed or already ran")
+    except Exception:
+        logger.exception("Failed to initialize database")
+
     application = Application.builder().token("8671366249:AAH5hTmnL4E4BYiWA7rMUYsQlGkfJL7ZmH0").build()
 
     # simple commands
     application.add_handler(CommandHandler("workflow", workflow_start))
+    application.add_handler(CommandHandler("export_workflows", export_workflows))
+    application.add_handler(CommandHandler("simulate_taller", simulate_taller))
+    application.add_handler(CommandHandler("simulate_servicio", simulate_servicio))
 
     # conversation handler for workflow
     conv_handler = ConversationHandler(
@@ -1662,6 +1799,13 @@ def main() -> None:
     application.add_handler(conv_handler)
 
     application.add_error_handler(error_handler)
+    # Ensure an event loop is available on Python 3.10+ where get_event_loop() may
+    # raise if no loop is set in the main thread. Create and set one if needed.
+    try:
+        asyncio.get_running_loop()
+    except Exception:
+        asyncio.set_event_loop(asyncio.new_event_loop())
+
     print("Bot is starting polling...")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
