@@ -9,6 +9,10 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 import tempfile
 import os
 import json
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # conversation states
 TYPE_CHOICE, MACHINE_NAME, MACHINE_NUM, COMPONENT, SUBCOMPONENT, CHECKLIST, COMMENT_CHOICE, COMMENT_TEXT, PANAS_CHOICE, PANAS_TEXT, SERVICE_CLIENT_SEARCH, SERVICE_CLIENT_SELECT, SERVICE_SERVICE_SELECT, SERVICE_SUBSERVICE_SELECT, SERVICE_DETAIL_HILERAS, SERVICE_DETAIL_CARAS, SERVICE_DETAIL_PASADAS, SERVICE_HOROMETRO_INICIO, SERVICE_HOROMETRO_TERMINO, SERVICE_HECTAREAS, SERVICE_HOROMETRO_INICIO_CONFIRM, SERVICE_HOROMETRO_TERMINO_CONFIRM, SERVICE_HECTAREAS_CONFIRM, COMMENT_TEXT_CONFIRM, PANAS_TEXT_CONFIRM = range(25)
@@ -1651,7 +1655,9 @@ def main() -> None:
     except Exception:
         logger.exception("Failed to initialize database")
 
-    application = Application.builder().token("8671366249:AAH5hTmnL4E4BYiWA7rMUYsQlGkfJL7ZmH0").build()
+    # Get token from environment variable
+    token = os.getenv("TELEGRAM_TOKEN", "8671366249:AAH5hTmnL4E4BYiWA7rMUYsQlGkfJL7ZmH0")
+    application = Application.builder().token(token).build()
 
     # simple commands
     application.add_handler(CommandHandler("workflow", workflow_start))
