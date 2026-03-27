@@ -4,6 +4,8 @@ import unicodedata
 import asyncio
 import db
 import datetime
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler, CallbackQueryHandler
 import tempfile
@@ -23,6 +25,34 @@ logging.basicConfig(
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
+
+
+# Simple HTTP handler for Render health checks
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        """Handle GET requests for health checks."""
+        if self.path == '/health' or self.path == '/':
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(b'Bot is running')
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def log_message(self, format, *args):
+        """Suppress HTTP server logging."""
+        pass
+
+
+def start_health_server():
+    """Start a simple HTTP health check server on port 10000."""
+    port = int(os.getenv('PORT', 10000))
+    server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    logger.info(f"Health check server started on port {port}")
+
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1807,8 +1837,9 @@ def main() -> None:
     except Exception:
         asyncio.set_event_loop(asyncio.new_event_loop())
 
-    print("Bot is starting polling...")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    # Start health check server for Render
+    start_health_server()
+    
 
 
 if __name__ == '__main__':
