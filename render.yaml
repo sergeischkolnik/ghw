@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: ghw-bot
+    runtime: python
+    pythonVersion: 3.12
+    buildCommand: bash build.sh
+    startCommand: python -u main.py
+    envVars:
+      - key: TELEGRAM_TOKEN
+        scope: run
+
