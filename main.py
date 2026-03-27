@@ -1644,16 +1644,11 @@ async def finish_workflow(query, context: ContextTypes.DEFAULT_TYPE, message=Non
 
 def main() -> None:
     """Start the bot."""
-    # Ensure database and tables exist before starting
+    # Initialize database quickly (no heavy migrations on startup)
     try:
         asyncio.run(db.init_db())
-        # run JSON->DB migration if files present
-        try:
-            asyncio.run(db.migrate_json_files_to_db())
-        except Exception:
-            logger.exception("JSON migration failed or already ran")
-    except Exception:
-        logger.exception("Failed to initialize database")
+    except Exception as e:
+        logger.exception(f"Failed to initialize database: {e}")
 
     # Get token from environment variable
     token = os.getenv("TELEGRAM_TOKEN", "8671366249:AAH5hTmnL4E4BYiWA7rMUYsQlGkfJL7ZmH0")

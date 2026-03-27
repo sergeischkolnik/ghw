@@ -1,0 +1,46 @@
+#cloud-config
+package_update: true
+packages:
+  - git
+  - python3-venv
+  - python3-pip
+  - awscli
+
+write_files:
+  - path: /etc/ghw/env
+    owner: root:root
+    permissions: '0600'
+    content: |
+      # Environment variables for ghw service
+      # Set TELEGRAM_TOKEN and optionally S3_BUCKET
+      TELEGRAM_TOKEN=
+      S3_BUCKET=
+
+runcmd:
+  - mkdir -p /opt/ghw
+  - chown -R ubuntu:ubuntu /opt/ghw
+  - su - ubuntu -c "git clone https://github.com/sergeischkolnik/ghw.git /opt/ghw || (cd /opt/ghw && git pull)"
+  - su - ubuntu -c "cd /opt/ghw && python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt"
+  - |
+    cat >/etc/systemd/system/ghw.service <<'SERVICE'
+[Unit]
+Description=Goharvest Telegram bot
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/opt/ghw
+EnvironmentFile=/etc/ghw/env
+ExecStart=/opt/ghw/.venv/bin/python /opt/ghw/main.py
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+
+  - systemctl daemon-reload
+  - systemctl enable ghw.service
+  - systemctl start ghw.service
+
+final_message: "The ghw instance is ready"
