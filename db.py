@@ -7,9 +7,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def convert_datetime_to_str(obj):
-    """Recursively convert datetime objects to ISO format strings for JSON serialization."""
+    """Recursively convert datetime objects to ISO format strings and sets to lists for JSON serialization."""
     if isinstance(obj, datetime):
         return obj.isoformat()
+    elif isinstance(obj, set):
+        return [convert_datetime_to_str(item) for item in obj]
     elif isinstance(obj, dict):
         return {k: convert_datetime_to_str(v) for k, v in obj.items()}
     elif isinstance(obj, list):
