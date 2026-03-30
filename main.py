@@ -54,7 +54,6 @@ def start_health_server():
     logger.info(f"Health check server started on port {port}")
 
 
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /start is issued."""
     # Clear any existing workflow data to start fresh
@@ -1840,7 +1839,11 @@ def main() -> None:
     # Start health check server for Render
     start_health_server()
     
-
-
-if __name__ == '__main__':
-    main()
+    print("Bot is starting polling...")
+    try:
+        application.run_polling(allowed_updates=Update.ALL_TYPES)
+    except KeyboardInterrupt:
+        logger.info("Bot interrupted by user")
+    except Exception as e:
+        logger.exception(f"Bot encountered an error: {e}")
+        raise
