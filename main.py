@@ -1651,8 +1651,11 @@ async def finish_workflow(query, context: ContextTypes.DEFAULT_TYPE, message=Non
             user_id = getattr(message.from_user, 'id', None)
         # use retrying wrapper
         new_id = await db.insert_workflow_with_retry(data, user_id=user_id)
+        print(f"✅ Workflow saved to DB: id={new_id}, type={data.get('type')}", flush=True)
+        logger.info(f"Workflow saved: id={new_id}, type={data.get('type')}")
         db_result_msg = f"\nGuardado en la base de datos (id={new_id})."
     except Exception as e:
+        print(f"❌ Failed to save workflow: {e}", flush=True)
         logger.exception("Failed to save workflow to DB: %s", e)
         db_result_msg = "\nOcurrió un error al guardar en la base de datos."
 

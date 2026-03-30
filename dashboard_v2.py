@@ -45,6 +45,16 @@ st.caption(f"ℹ️ Auto-refreshes every 60 seconds • Last update: {datetime.n
 try:
     taller_df, servicio_df = load_data()
     
+    # Debug: Show database path and row counts
+    with st.expander("🔍 Debug Info"):
+        st.write(f"**Database file:** ghw.db")
+        st.write(f"**Taller rows:** {len(taller_df)}")
+        st.write(f"**Servicio rows:** {len(servicio_df)}")
+        if len(taller_df) > 0:
+            st.write(f"**Latest TALLER:** {taller_df['timestamp'].iloc[0]}")
+        if len(servicio_df) > 0:
+            st.write(f"**Latest SERVICIO:** {servicio_df['timestamp'].iloc[0]}")
+    
     # KPIs
     col1, col2, col3 = st.columns(3)
     col1.metric("📋 Total", len(taller_df) + len(servicio_df))
