@@ -3,7 +3,6 @@ import sqlite3
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
-import time
 
 st.set_page_config(page_title="GHW Dashboard", layout="wide")
 st.title("📊 GHW Workflows")
@@ -32,30 +31,13 @@ def load_data():
     return taller, servicio
 
 
-# Initialize session state for auto-refresh
-if "last_refresh" not in st.session_state:
-    st.session_state.last_refresh = time.time()
-
-# Add refresh button and auto-refresh timer
-col1, col2, col3 = st.columns([2, 1, 1])
-with col2:
-    if st.button("🔄 Refresh Now"):
-        st.cache_data.clear()
-        st.session_state.last_refresh = time.time()
-        st.rerun()
-
-with col3:
-    elapsed = int(time.time() - st.session_state.last_refresh)
-    st.metric("Auto-refresh in", f"{60 - elapsed}s")
-
-# Auto-refresh every 60 seconds
-if time.time() - st.session_state.last_refresh > 60:
+# Add manual refresh button
+if st.button("🔄 Refresh Now"):
     st.cache_data.clear()
-    st.session_state.last_refresh = time.time()
     st.rerun()
 
 # Display last update time
-st.caption(f"ℹ️ Auto-refreshes every 60 seconds • Last update: {datetime.now().strftime('%H:%M:%S')}")
+st.caption(f"ℹ️ Last update: {datetime.now().strftime('%H:%M:%S')}")
 
 try:
     taller_df, servicio_df = load_data()
