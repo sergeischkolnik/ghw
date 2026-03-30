@@ -2,7 +2,7 @@ import logging
 import json
 import unicodedata
 import asyncio
-import db
+import db_postgres as db
 import datetime
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler

@@ -1,34 +1,46 @@
 import streamlit as st
-import sqlite3
+import psycopg2
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
+import os
 
 st.set_page_config(page_title="GHW Dashboard", layout="wide")
 st.title("📊 GHW Workflows")
 
-# Load data from NEW tables with cache (auto-refresh every 60 seconds)
+# Get PostgreSQL connection URL from environment
+DATABASE_URL = os.getenv('DATABASE_URL')
+
+if not DATABASE_URL:
+    st.error("❌ DATABASE_URL environment variable not set")
+    st.stop()
+
+
 @st.cache_data(ttl=60)
 def load_data():
-    """Load data with 60-second cache - automatically refreshes after 60 sec"""
-    conn = sqlite3.connect('ghw.db', check_same_thread=False)
-    
-    # Load TALLER workflows (from workshops table)
-    taller = pd.read_sql_query("""
-        SELECT id, machine_name, machine_num, comment, start_ts as timestamp
-        FROM workshops
-        ORDER BY start_ts DESC
-    """, conn)
-    
-    # Load SERVICIO workflows (from services table)
-    servicio = pd.read_sql_query("""
-        SELECT id, client_id as client_name, service_id as service, comment, start_ts as timestamp
-        FROM services
-        ORDER BY start_ts DESC
-    """, conn)
-    
-    conn.close()
-    return taller, servicio
+    """Load data from PostgreSQL"""
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        
+        # Load TALLER workflows (from workshops table)
+        taller = pd.read_sql_query("""
+            SELECT id, machine_name, machine_num, comment, start_ts as timestamp
+            FROM workshops
+            ORDER BY start_ts DESC
+        """, conn)
+        
+        # Load SERVICIO workflows (from services table)
+        servicio = pd.read_sql_query("""
+            SELECT id, client_id as client_name, service_id as service, comment, start_ts as timestamp
+            FROM services
+            ORDER BY start_ts DESC
+        """, conn)
+        
+        conn.close()
+        return taller, servicio
+    except Exception as e:
+        st.error(f"❌ Database error: {e}")
+        return pd.DataFrame(), pd.DataFrame()
 
 
 # Add manual refresh button
@@ -42,11 +54,11 @@ st.caption(f"ℹ️ Last update: {datetime.now().strftime('%H:%M:%S')}")
 try:
     taller_df, servicio_df = load_data()
     
-    # Debug: Show database path and row counts
+    # Debug: Show database info
     with st.expander("🔍 Debug Info"):
-        st.write(f"**Database file:** ghw.db")
-        st.write(f"**Taller rows:** {len(taller_df)}")
-        st.write(f"**Servicio rows:** {len(servicio_df)}")
+        st.write(f"**Database:** PostgreSQL (via DATABASE_URL)")
+        st.write(f"**Taller workflows:** {len(taller_df)}")
+        st.write(f"**Servicio workflows:** {len(servicio_df)}")
         if len(taller_df) > 0:
             st.write(f"**Latest TALLER:** {taller_df['timestamp'].iloc[0]}")
         if len(servicio_df) > 0:
