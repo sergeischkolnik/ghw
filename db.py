@@ -1,9 +1,20 @@
 import aiosqlite
 import json
 import os
+from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
+
+def convert_datetime_to_str(obj):
+    """Recursively convert datetime objects to ISO format strings for JSON serialization."""
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    elif isinstance(obj, dict):
+        return {k: convert_datetime_to_str(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_datetime_to_str(item) for item in obj]
+    return obj
 
 # Detect environment and set DB path accordingly
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'dev').lower()
@@ -100,6 +111,8 @@ async def insert_workshop(workflow: dict, user_id: int | None = None, db_path: s
             return wid
 
         # Fallback to new `workshops` table
+        # Convert datetime objects to strings for JSON serialization
+        workflow_serializable = convert_datetime_to_str(workflow)
         cur = await db.execute(
             """
             INSERT INTO workshops (user_id,machine_name,machine_num,component_id,subcomponent_id,start_ts,end_ts,comment,panas,data_json)
@@ -115,7 +128,7 @@ async def insert_workshop(workflow: dict, user_id: int | None = None, db_path: s
                 workflow.get('end').isoformat() if workflow.get('end') else None,
                 workflow.get('comment'),
                 workflow.get('panas'),
-                json.dumps(workflow)
+                json.dumps(workflow_serializable)
             )
         )
         await db.commit()
@@ -160,6 +173,8 @@ async def insert_service(workflow: dict, user_id: int | None = None, db_path: st
             return sid
 
         # Fallback to new `services` table
+        # Convert datetime objects to strings for JSON serialization
+        workflow_serializable = convert_datetime_to_str(workflow)
         cur = await db.execute(
             """
             INSERT INTO services (user_id,client_id,service_id,subservice_id,details_json,horometro_start,horometro_end,hectareas,comment,panas,start_ts,end_ts,data_json)
@@ -178,7 +193,7 @@ async def insert_service(workflow: dict, user_id: int | None = None, db_path: st
                 workflow.get('panas'),
                 workflow.get('start').isoformat() if workflow.get('start') else None,
                 workflow.get('end').isoformat() if workflow.get('end') else None,
-                json.dumps(workflow)
+                json.dumps(workflow_serializable)
             )
         )
         await db.commit()
