@@ -1678,6 +1678,10 @@ def main() -> None:
     """Start the bot."""
     print("=" * 50, flush=True)
     print("🤖 GHW Bot starting...", flush=True)
+    
+    # Show environment info
+    environment = os.getenv('ENVIRONMENT', 'dev').lower()
+    print(f"📍 Environment: {environment.upper()}", flush=True)
     print("=" * 50, flush=True)
     
     # Initialize database quickly (no heavy migrations on startup)

@@ -1,8 +1,18 @@
 import aiosqlite
 import json
+import os
+from dotenv import load_dotenv
 
-# Default DB file used by the bot (matches existing db file if present)
-DB_PATH = 'ghw.db'
+load_dotenv()
+
+# Detect environment and set DB path accordingly
+ENVIRONMENT = os.getenv('ENVIRONMENT', 'dev').lower()
+if ENVIRONMENT == 'production':
+    DB_PATH = 'ghw.db'  # Production database
+else:
+    DB_PATH = 'ghw-dev.db'  # Development database (default)
+
+print(f"[DB] Environment: {ENVIRONMENT.upper()}, Database: {DB_PATH}", flush=True)
 
 
 async def init_db(db_path: str = DB_PATH) -> None:
