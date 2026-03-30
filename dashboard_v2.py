@@ -3,12 +3,15 @@ import sqlite3
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
+import time
 
 st.set_page_config(page_title="GHW Dashboard", layout="wide")
 st.title("📊 GHW Workflows")
 
-# Load data from legacy tables
+# Load data from legacy tables with cache (auto-refresh every 60 seconds)
+@st.cache_data(ttl=60)
 def load_data():
+    """Load data with 60-second cache - automatically refreshes after 60 sec"""
     conn = sqlite3.connect('ghw.db', check_same_thread=False)
     
     # Load TALLER workflows
@@ -27,6 +30,17 @@ def load_data():
     
     conn.close()
     return taller, servicio
+
+
+# Add refresh button and last update info
+col1, col2 = st.columns([3, 1])
+with col2:
+    if st.button("🔄 Refresh Now"):
+        st.cache_data.clear()
+        st.rerun()
+
+# Display last update time
+st.caption(f"ℹ️ Auto-refreshes every 60 seconds • Last update: {datetime.now().strftime('%H:%M:%S')}")
 
 try:
     taller_df, servicio_df = load_data()
