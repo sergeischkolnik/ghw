@@ -8,36 +8,51 @@ import time
 st.set_page_config(page_title="GHW Dashboard", layout="wide")
 st.title("📊 GHW Workflows")
 
-# Load data from legacy tables with cache (auto-refresh every 60 seconds)
+# Load data from NEW tables with cache (auto-refresh every 60 seconds)
 @st.cache_data(ttl=60)
 def load_data():
     """Load data with 60-second cache - automatically refreshes after 60 sec"""
     conn = sqlite3.connect('ghw.db', check_same_thread=False)
     
-    # Load TALLER workflows
+    # Load TALLER workflows (from workshops table)
     taller = pd.read_sql_query("""
-        SELECT id, machine_name, machine_number, component, comments, timestamp 
-        FROM taller_outputs
-        ORDER BY timestamp DESC
+        SELECT id, machine_name, machine_num, comment, start_ts as timestamp
+        FROM workshops
+        ORDER BY start_ts DESC
     """, conn)
     
-    # Load SERVICIO workflows  
+    # Load SERVICIO workflows (from services table)
     servicio = pd.read_sql_query("""
-        SELECT id, client_name, service, details, comments, timestamp 
-        FROM servicio_outputs
-        ORDER BY timestamp DESC
+        SELECT id, client_id as client_name, service_id as service, comment, start_ts as timestamp
+        FROM services
+        ORDER BY start_ts DESC
     """, conn)
     
     conn.close()
     return taller, servicio
 
 
-# Add refresh button and last update info
-col1, col2 = st.columns([3, 1])
+# Initialize session state for auto-refresh
+if "last_refresh" not in st.session_state:
+    st.session_state.last_refresh = time.time()
+
+# Add refresh button and auto-refresh timer
+col1, col2, col3 = st.columns([2, 1, 1])
 with col2:
     if st.button("🔄 Refresh Now"):
         st.cache_data.clear()
+        st.session_state.last_refresh = time.time()
         st.rerun()
+
+with col3:
+    elapsed = int(time.time() - st.session_state.last_refresh)
+    st.metric("Auto-refresh in", f"{60 - elapsed}s")
+
+# Auto-refresh every 60 seconds
+if time.time() - st.session_state.last_refresh > 60:
+    st.cache_data.clear()
+    st.session_state.last_refresh = time.time()
+    st.rerun()
 
 # Display last update time
 st.caption(f"ℹ️ Auto-refreshes every 60 seconds • Last update: {datetime.now().strftime('%H:%M:%S')}")
