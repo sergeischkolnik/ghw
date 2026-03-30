@@ -1673,17 +1673,27 @@ async def finish_workflow(query, context: ContextTypes.DEFAULT_TYPE, message=Non
 
 def main() -> None:
     """Start the bot."""
+    print("=" * 50, flush=True)
+    print("🤖 GHW Bot starting...", flush=True)
+    print("=" * 50, flush=True)
+    
     # Initialize database quickly (no heavy migrations on startup)
     try:
+        print("[1/5] Initializing database...", flush=True)
         asyncio.run(db.init_db())
+        print("[✓] Database initialized", flush=True)
     except Exception as e:
+        print(f"[✗] Database initialization failed: {e}", flush=True)
         logger.exception(f"Failed to initialize database: {e}")
 
     # Get token from environment variable
+    print("[2/5] Creating Telegram application...", flush=True)
     token = os.getenv("TELEGRAM_TOKEN", "8671366249:AAH5hTmnL4E4BYiWA7rMUYsQlGkfJL7ZmH0")
     application = Application.builder().token(token).build()
+    print("[✓] Application created", flush=True)
 
     # simple commands
+    print("[3/5] Adding command handlers...", flush=True)
     application.add_handler(CommandHandler("workflow", workflow_start))
     application.add_handler(CommandHandler("export_workflows", export_workflows))
     application.add_handler(CommandHandler("simulate_taller", simulate_taller))
@@ -1826,9 +1836,11 @@ def main() -> None:
         },
         fallbacks=[CommandHandler('cancel', finish_workflow)],
     )
+    print("[✓] Conversation handler created", flush=True)
     application.add_handler(conv_handler)
 
     application.add_error_handler(error_handler)
+    print("[4/5] Setting up event loop...", flush=True)
     # Ensure an event loop is available on Python 3.10+ where get_event_loop() may
     # raise if no loop is set in the main thread. Create and set one if needed.
     try:
@@ -1837,9 +1849,11 @@ def main() -> None:
         asyncio.set_event_loop(asyncio.new_event_loop())
 
     # Start health check server for Render
+    print("[5/5] Starting health check server...", flush=True)
     start_health_server()
+    print("[✓] All systems initialized", flush=True)
     
-    print("Bot is starting polling...")
+    print("🚀 Bot is starting polling...", flush=True)
     try:
         application.run_polling(allowed_updates=Update.ALL_TYPES)
     except KeyboardInterrupt:
@@ -1847,3 +1861,13 @@ def main() -> None:
     except Exception as e:
         logger.exception(f"Bot encountered an error: {e}")
         raise
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except Exception as e:
+        print(f"FATAL ERROR: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        exit(1)
