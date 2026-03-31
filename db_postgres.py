@@ -1,4 +1,4 @@
-import asyncpg
+import psycopg
 import json
 import os
 from datetime import datetime
@@ -15,9 +15,9 @@ if not DATABASE_URL:
 print(f"[DB] Connecting to PostgreSQL: {DATABASE_URL.split('@')[1] if '@' in DATABASE_URL else 'unknown'}", flush=True)
 
 
-async def get_db_pool():
-    """Get or create a PostgreSQL connection pool."""
-    return await asyncpg.create_pool(DATABASE_URL, min_size=1, max_size=5)
+async def get_db_conn():
+    """Get a PostgreSQL async connection."""
+    return await psycopg.AsyncConnection.connect(DATABASE_URL)
 
 
 def convert_datetime_to_str(obj):
@@ -35,8 +35,8 @@ def convert_datetime_to_str(obj):
 
 async def init_db() -> None:
     """Create required tables for workshops and services."""
-    pool = await get_db_pool()
-    async with pool.acquire() as conn:
+    conn = await get_db_conn()
+    try:
         # Workshops: flows that correspond to "TALLER"
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS workshops (
@@ -87,13 +87,15 @@ async def init_db() -> None:
         )
         """)
 
-    await pool.close()
+        print("[DB] Tables created successfully", flush=True)
+    finally:
+        await conn.close()
 
 
 async def insert_workshop(workflow: dict, user_id: int | None = None) -> int:
     """Insert a `TALLER` workflow into `workshops` and its checklist items."""
-    pool = await get_db_pool()
-    async with pool.acquire() as conn:
+    conn = await get_db_conn()
+    try:
         # Build checklist JSON from selected indices
         selected = sorted(workflow.get('selected_indices', []))
         items = workflow.get('current_items', []) or []
@@ -102,75 +104,83 @@ async def insert_workshop(workflow: dict, user_id: int | None = None) -> int:
         # Convert datetime objects to strings for JSON serialization
         workflow_serializable = convert_datetime_to_str(workflow)
         
-        wid = await conn.fetchval(
+        result = await conn.execute(
             """
             INSERT INTO workshops (user_id,machine_name,machine_num,component_id,subcomponent_id,start_ts,end_ts,comment,panas,data_json)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             RETURNING id
             """,
-            user_id,
-            workflow.get('machine_name'),
-            workflow.get('machine_num'),
-            workflow.get('component_id'),
-            workflow.get('subcomponent_id'),
-            workflow.get('start').isoformat() if workflow.get('start') else None,
-            workflow.get('end').isoformat() if workflow.get('end') else None,
-            workflow.get('comment'),
-            workflow.get('panas'),
-            json.dumps(workflow_serializable)
-        )
+            (
+                user_id,
+                workflow.get('machine_name'),
+                workflow.get('machine_num'),
+                workflow.get('component_id'),
+                workflow.get('subcomponent_id'),
+                workflow.get('start').isoformat() if workflow.get('start') else None,
+                workflow.get('end').isoformat() if workflow.get('end') else None,
+                workflow.get('comment'),
+                workflow.get('panas'),
+                json.dumps(workflow_serializable)
+            )
+        ).fetchone()
+        wid = result[0] if result else None
 
         for idx in selected:
             if 0 <= idx < len(items):
                 await conn.execute(
-                    "INSERT INTO checklist_items (owner_type,owner_id,item_index,item_text) VALUES ($1,$2,$3,$4)",
-                    'workshop', wid, idx, items[idx]
+                    "INSERT INTO checklist_items (owner_type,owner_id,item_index,item_text) VALUES (%s,%s,%s,%s)",
+                    ('workshop', wid, idx, items[idx])
                 )
 
-    await pool.close()
-    return wid
+        return wid
+    finally:
+        await conn.close()
 
 
 async def insert_service(workflow: dict, user_id: int | None = None) -> int:
     """Insert a `SERVICIO` workflow into `services` and its checklist items."""
-    pool = await get_db_pool()
-    async with pool.acquire() as conn:
+    conn = await get_db_conn()
+    try:
         selected = sorted(workflow.get('selected_indices', []))
         items = workflow.get('current_items', []) or []
 
         # Convert datetime objects to strings for JSON serialization
         workflow_serializable = convert_datetime_to_str(workflow)
         
-        sid = await conn.fetchval(
+        result = await conn.execute(
             """
             INSERT INTO services (user_id,client_id,service_id,subservice_id,details_json,horometro_start,horometro_end,hectareas,comment,panas,start_ts,end_ts,data_json)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             RETURNING id
             """,
-            user_id,
-            workflow.get('client'),
-            workflow.get('service'),
-            workflow.get('subservice'),
-            json.dumps(workflow.get('details', {})),
-            workflow.get('horometro_inicio'),
-            workflow.get('horometro_termino'),
-            workflow.get('hectareas'),
-            workflow.get('comment'),
-            workflow.get('panas'),
-            workflow.get('start').isoformat() if workflow.get('start') else None,
-            workflow.get('end').isoformat() if workflow.get('end') else None,
-            json.dumps(workflow_serializable)
-        )
+            (
+                user_id,
+                workflow.get('client'),
+                workflow.get('service'),
+                workflow.get('subservice'),
+                json.dumps(workflow.get('details', {})),
+                workflow.get('horometro_inicio'),
+                workflow.get('horometro_termino'),
+                workflow.get('hectareas'),
+                workflow.get('comment'),
+                workflow.get('panas'),
+                workflow.get('start').isoformat() if workflow.get('start') else None,
+                workflow.get('end').isoformat() if workflow.get('end') else None,
+                json.dumps(workflow_serializable)
+            )
+        ).fetchone()
+        sid = result[0] if result else None
 
         for idx in selected:
             if 0 <= idx < len(items):
                 await conn.execute(
-                    "INSERT INTO checklist_items (owner_type,owner_id,item_index,item_text) VALUES ($1,$2,$3,$4)",
-                    'service', sid, idx, items[idx]
+                    "INSERT INTO checklist_items (owner_type,owner_id,item_index,item_text) VALUES (%s,%s,%s,%s)",
+                    ('service', sid, idx, items[idx])
                 )
 
-    await pool.close()
-    return sid
+        return sid
+    finally:
+        await conn.close()
 
 
 async def insert_workflow(workflow: dict, user_id: int | None = None) -> int:
