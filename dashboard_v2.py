@@ -1,5 +1,5 @@
 import streamlit as st
-import psycopg2
+import psycopg
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
@@ -8,19 +8,21 @@ import os
 st.set_page_config(page_title="GHW Dashboard", layout="wide")
 st.title("📊 GHW Workflows")
 
-# Get PostgreSQL connection URL from environment
-DATABASE_URL = os.getenv('DATABASE_URL')
-
-if not DATABASE_URL:
-    st.error("❌ DATABASE_URL environment variable not set")
-    st.stop()
+# Get PostgreSQL connection URL from environment (lazy loaded)
+def get_database_url():
+    db_url = os.getenv('DATABASE_URL')
+    if not db_url:
+        st.error("❌ DATABASE_URL environment variable not set")
+        st.stop()
+    return db_url
 
 
 @st.cache_data(ttl=60)
 def load_data():
     """Load data from PostgreSQL"""
     try:
-        conn = psycopg2.connect(DATABASE_URL)
+        db_url = get_database_url()
+        conn = psycopg.connect(db_url)
         
         # Load TALLER workflows (from workshops table)
         taller = pd.read_sql_query("""

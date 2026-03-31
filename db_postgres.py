@@ -6,18 +6,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Get PostgreSQL connection URL from environment
-DATABASE_URL = os.getenv('DATABASE_URL')
 
-if not DATABASE_URL:
-    raise ValueError("DATABASE_URL environment variable not set")
-
-print(f"[DB] Connecting to PostgreSQL: {DATABASE_URL.split('@')[1] if '@' in DATABASE_URL else 'unknown'}", flush=True)
+def get_database_url():
+    """Get DATABASE_URL from environment, with lazy loading."""
+    database_url = os.getenv('DATABASE_URL')
+    if not database_url:
+        raise ValueError("DATABASE_URL environment variable not set")
+    return database_url
 
 
 async def get_db_conn():
     """Get a PostgreSQL async connection."""
-    return await psycopg.AsyncConnection.connect(DATABASE_URL)
+    db_url = get_database_url()
+    return await psycopg.AsyncConnection.connect(db_url)
 
 
 def convert_datetime_to_str(obj):
