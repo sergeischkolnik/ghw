@@ -12,6 +12,12 @@ import db_postgres as db
 
 
 async def main():
+    # Check if DATABASE_URL is available
+    if not os.getenv('DATABASE_URL'):
+        print("⚠️  DATABASE_URL not available during build, skipping table initialization")
+        print("    Tables will be created on first bot run")
+        return
+    
     print("🔧 Initializing PostgreSQL database...")
     try:
         await db.init_db()
