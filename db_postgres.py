@@ -100,38 +100,39 @@ async def insert_workshop(workflow: dict, user_id: int | None = None) -> int:
         # Build checklist JSON from selected indices
         selected = sorted(workflow.get('selected_indices', []))
         items = workflow.get('current_items', []) or []
-        checklist_list = [items[idx] for idx in selected if 0 <= idx < len(items)]
 
         # Convert datetime objects to strings for JSON serialization
         workflow_serializable = convert_datetime_to_str(workflow)
         
-        result = await conn.execute(
-            """
-            INSERT INTO workshops (user_id,machine_name,machine_num,component_id,subcomponent_id,start_ts,end_ts,comment,panas,data_json)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-            RETURNING id
-            """,
-            (
-                user_id,
-                workflow.get('machine_name'),
-                workflow.get('machine_num'),
-                workflow.get('component_id'),
-                workflow.get('subcomponent_id'),
-                workflow.get('start').isoformat() if workflow.get('start') else None,
-                workflow.get('end').isoformat() if workflow.get('end') else None,
-                workflow.get('comment'),
-                workflow.get('panas'),
-                json.dumps(workflow_serializable)
-            )
-        ).fetchone()
-        wid = result[0] if result else None
-
-        for idx in selected:
-            if 0 <= idx < len(items):
-                await conn.execute(
-                    "INSERT INTO checklist_items (owner_type,owner_id,item_index,item_text) VALUES (%s,%s,%s,%s)",
-                    ('workshop', wid, idx, items[idx])
+        async with conn.cursor() as cur:
+            await cur.execute(
+                """
+                INSERT INTO workshops (user_id,machine_name,machine_num,component_id,subcomponent_id,start_ts,end_ts,comment,panas,data_json)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                RETURNING id
+                """,
+                (
+                    user_id,
+                    workflow.get('machine_name'),
+                    workflow.get('machine_num'),
+                    workflow.get('component_id'),
+                    workflow.get('subcomponent_id'),
+                    workflow.get('start').isoformat() if workflow.get('start') else None,
+                    workflow.get('end').isoformat() if workflow.get('end') else None,
+                    workflow.get('comment'),
+                    workflow.get('panas'),
+                    json.dumps(workflow_serializable)
                 )
+            )
+            result = await cur.fetchone()
+            wid = result[0] if result else None
+
+            for idx in selected:
+                if 0 <= idx < len(items):
+                    await cur.execute(
+                        "INSERT INTO checklist_items (owner_type,owner_id,item_index,item_text) VALUES (%s,%s,%s,%s)",
+                        ('workshop', wid, idx, items[idx])
+                    )
 
         return wid
     finally:
@@ -148,36 +149,38 @@ async def insert_service(workflow: dict, user_id: int | None = None) -> int:
         # Convert datetime objects to strings for JSON serialization
         workflow_serializable = convert_datetime_to_str(workflow)
         
-        result = await conn.execute(
-            """
-            INSERT INTO services (user_id,client_id,service_id,subservice_id,details_json,horometro_start,horometro_end,hectareas,comment,panas,start_ts,end_ts,data_json)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-            RETURNING id
-            """,
-            (
-                user_id,
-                workflow.get('client'),
-                workflow.get('service'),
-                workflow.get('subservice'),
-                json.dumps(workflow.get('details', {})),
-                workflow.get('horometro_inicio'),
-                workflow.get('horometro_termino'),
-                workflow.get('hectareas'),
-                workflow.get('comment'),
-                workflow.get('panas'),
-                workflow.get('start').isoformat() if workflow.get('start') else None,
-                workflow.get('end').isoformat() if workflow.get('end') else None,
-                json.dumps(workflow_serializable)
-            )
-        ).fetchone()
-        sid = result[0] if result else None
-
-        for idx in selected:
-            if 0 <= idx < len(items):
-                await conn.execute(
-                    "INSERT INTO checklist_items (owner_type,owner_id,item_index,item_text) VALUES (%s,%s,%s,%s)",
-                    ('service', sid, idx, items[idx])
+        async with conn.cursor() as cur:
+            await cur.execute(
+                """
+                INSERT INTO services (user_id,client_id,service_id,subservice_id,details_json,horometro_start,horometro_end,hectareas,comment,panas,start_ts,end_ts,data_json)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                RETURNING id
+                """,
+                (
+                    user_id,
+                    workflow.get('client'),
+                    workflow.get('service'),
+                    workflow.get('subservice'),
+                    json.dumps(workflow.get('details', {})),
+                    workflow.get('horometro_inicio'),
+                    workflow.get('horometro_termino'),
+                    workflow.get('hectareas'),
+                    workflow.get('comment'),
+                    workflow.get('panas'),
+                    workflow.get('start').isoformat() if workflow.get('start') else None,
+                    workflow.get('end').isoformat() if workflow.get('end') else None,
+                    json.dumps(workflow_serializable)
                 )
+            )
+            result = await cur.fetchone()
+            sid = result[0] if result else None
+
+            for idx in selected:
+                if 0 <= idx < len(items):
+                    await cur.execute(
+                        "INSERT INTO checklist_items (owner_type,owner_id,item_index,item_text) VALUES (%s,%s,%s,%s)",
+                        ('service', sid, idx, items[idx])
+                    )
 
         return sid
     finally:
