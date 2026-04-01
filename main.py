@@ -27,21 +27,27 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+# Global health check counter for monitoring
+health_check_count = 0
+
 # Simple HTTP handler for Render health checks
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         """Handle GET requests for health checks."""
-        print(f"[Health Check] GET {self.path}", flush=True)
+        global health_check_count
+        health_check_count += 1
+        timestamp = datetime.datetime.now().isoformat()
+        print(f"[HC #{health_check_count}] {timestamp} GET {self.path}", flush=True)
         if self.path == '/health' or self.path == '/':
             self.send_response(200)
             self.send_header('Content-type', 'text/plain')
             self.end_headers()
             self.wfile.write(b'Bot is running')
-            print(f"[Health Check] Responded with 200", flush=True)
+            print(f"[HC #{health_check_count}] ✓ 200 OK", flush=True)
         else:
             self.send_response(404)
             self.end_headers()
-            print(f"[Health Check] Responded with 404", flush=True)
+            print(f"[HC #{health_check_count}] ✗ 404 Not Found", flush=True)
 
     def log_message(self, format, *args):
         """Suppress HTTP server logging."""
@@ -1874,18 +1880,37 @@ def main() -> None:
     
     print("🚀 Bot is starting polling...", flush=True)
     print(f"📱 Token configured: {bool(token)}", flush=True)
-    try:
-        print("⏳ Entering polling mode...", flush=True)
-        logger.info("Bot polling started")
-        application.run_polling(allowed_updates=Update.ALL_TYPES)
-        print("⚠️  Polling ended unexpectedly", flush=True)
-    except KeyboardInterrupt:
-        print("🛑 Bot interrupted by user", flush=True)
-        logger.info("Bot interrupted by user")
-    except Exception as e:
-        print(f"❌ Bot error: {e}", flush=True)
-        logger.exception(f"Bot encountered an error: {e}")
-        raise
+    
+    # Polling loop with auto-restart on disconnection
+    restart_count = 0
+    max_restarts = 5
+    while restart_count < max_restarts:
+        try:
+            print(f"⏳ Entering polling mode (attempt {restart_count + 1}/{max_restarts})...", flush=True)
+            logger.info(f"Bot polling started (attempt {restart_count + 1})")
+            application.run_polling(allowed_updates=Update.ALL_TYPES, timeout=30)
+            print("⚠️  Polling ended unexpectedly", flush=True)
+            restart_count += 1
+            if restart_count < max_restarts:
+                print(f"🔄 Restarting polling in 5 seconds...", flush=True)
+                import time
+                time.sleep(5)
+        except KeyboardInterrupt:
+            print("🛑 Bot interrupted by user", flush=True)
+            logger.info("Bot interrupted by user")
+            break
+        except Exception as e:
+            print(f"❌ Polling error: {type(e).__name__}: {e}", flush=True)
+            logger.exception(f"Polling error: {e}")
+            restart_count += 1
+            if restart_count < max_restarts:
+                print(f"🔄 Restarting polling in 5 seconds...", flush=True)
+                import time
+                time.sleep(5)
+    
+    if restart_count >= max_restarts:
+        print(f"❌ CRITICAL: Polling failed {max_restarts} times, giving up", flush=True)
+        logger.critical(f"Polling failed {max_restarts} times")
 
 
 if __name__ == '__main__':
