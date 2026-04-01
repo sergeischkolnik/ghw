@@ -31,14 +31,17 @@ logger = logging.getLogger(__name__)
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         """Handle GET requests for health checks."""
+        print(f"[Health Check] GET {self.path}", flush=True)
         if self.path == '/health' or self.path == '/':
             self.send_response(200)
             self.send_header('Content-type', 'text/plain')
             self.end_headers()
             self.wfile.write(b'Bot is running')
+            print(f"[Health Check] Responded with 200", flush=True)
         else:
             self.send_response(404)
             self.end_headers()
+            print(f"[Health Check] Responded with 404", flush=True)
 
     def log_message(self, format, *args):
         """Suppress HTTP server logging."""
@@ -48,10 +51,15 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
 def start_health_server():
     """Start a simple HTTP health check server on port 10000."""
     port = int(os.getenv('PORT', 10000))
-    server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    logger.info(f"Health check server started on port {port}")
+    try:
+        server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        print(f"✅ Health check server started on port {port}", flush=True)
+        logger.info(f"Health check server started on port {port}")
+    except Exception as e:
+        print(f"❌ Failed to start health check server: {e}", flush=True)
+        logger.exception(f"Failed to start health check server: {e}")
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1861,11 +1869,17 @@ def main() -> None:
     print("[✓] All systems initialized", flush=True)
     
     print("🚀 Bot is starting polling...", flush=True)
+    print(f"📱 Token configured: {bool(token)}", flush=True)
     try:
+        print("⏳ Entering polling mode...", flush=True)
+        logger.info("Bot polling started")
         application.run_polling(allowed_updates=Update.ALL_TYPES)
+        print("⚠️  Polling ended unexpectedly", flush=True)
     except KeyboardInterrupt:
+        print("🛑 Bot interrupted by user", flush=True)
         logger.info("Bot interrupted by user")
     except Exception as e:
+        print(f"❌ Bot error: {e}", flush=True)
         logger.exception(f"Bot encountered an error: {e}")
         raise
 
