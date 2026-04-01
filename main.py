@@ -1692,14 +1692,18 @@ def main() -> None:
     print(f"📍 Environment: {environment.upper()}", flush=True)
     print("=" * 50, flush=True)
     
-    # Initialize database quickly (no heavy migrations on startup)
+    # Initialize database - CRITICAL, must succeed
     try:
         print("[1/5] Initializing database...", flush=True)
+        print(f"      DATABASE_URL: {bool(os.getenv('DATABASE_URL'))}", flush=True)
         asyncio.run(db.init_db())
-        print("[✓] Database initialized", flush=True)
+        print("[✓] Database initialized successfully", flush=True)
     except Exception as e:
-        print(f"[✗] Database initialization failed: {e}", flush=True)
-        logger.exception(f"Failed to initialize database: {e}")
+        print(f"[✗] CRITICAL: Database initialization FAILED", flush=True)
+        print(f"    Error: {type(e).__name__}: {e}", flush=True)
+        logger.exception(f"Database initialization failed")
+        # Do NOT continue - this is critical
+        raise
 
     # Get token from environment variable
     print("[2/5] Creating Telegram application...", flush=True)

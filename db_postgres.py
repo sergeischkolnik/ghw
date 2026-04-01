@@ -36,9 +36,17 @@ def convert_datetime_to_str(obj):
 
 async def init_db() -> None:
     """Create required tables for workshops and services."""
-    conn = await get_db_conn()
+    print("[DB] Attempting to connect to PostgreSQL...", flush=True)
+    try:
+        conn = await get_db_conn()
+        print("[DB] ✓ Connected to PostgreSQL", flush=True)
+    except Exception as e:
+        print(f"[DB] ✗ Connection failed: {e}", flush=True)
+        raise
+    
     try:
         # Workshops: flows that correspond to "TALLER"
+        print("[DB] Creating workshops table...", flush=True)
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS workshops (
             id SERIAL PRIMARY KEY,
@@ -55,8 +63,10 @@ async def init_db() -> None:
             created_at TIMESTAMP DEFAULT NOW()
         )
         """)
+        print("[DB] ✓ workshops table ready", flush=True)
 
         # Services: flows that correspond to "SERVICIO"
+        print("[DB] Creating services table...", flush=True)
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS services (
             id SERIAL PRIMARY KEY,
@@ -76,8 +86,10 @@ async def init_db() -> None:
             created_at TIMESTAMP DEFAULT NOW()
         )
         """)
+        print("[DB] ✓ services table ready", flush=True)
 
         # Generic checklist items: owner_type indicates workshop/service
+        print("[DB] Creating checklist_items table...", flush=True)
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS checklist_items (
             id SERIAL PRIMARY KEY,
@@ -87,8 +99,12 @@ async def init_db() -> None:
             item_text TEXT
         )
         """)
+        print("[DB] ✓ checklist_items table ready", flush=True)
 
-        print("[DB] Tables created successfully", flush=True)
+        print("[DB] ✓ All tables created successfully", flush=True)
+    except Exception as e:
+        print(f"[DB] ✗ Table creation failed: {e}", flush=True)
+        raise
     finally:
         await conn.close()
 
