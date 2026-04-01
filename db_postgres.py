@@ -101,6 +101,10 @@ async def init_db() -> None:
         """)
         print("[DB] ✓ checklist_items table ready", flush=True)
 
+        # CRITICAL: Commit all table creation changes to the database
+        print("[DB] Committing changes to database...", flush=True)
+        await conn.commit()
+        print("[DB] ✓ All changes committed", flush=True)
         print("[DB] ✓ All tables created successfully", flush=True)
     except Exception as e:
         print(f"[DB] ✗ Table creation failed: {e}", flush=True)
@@ -113,6 +117,18 @@ async def insert_workshop(workflow: dict, user_id: int | None = None) -> int:
     """Insert a `TALLER` workflow into `workshops` and its checklist items."""
     conn = await get_db_conn()
     try:
+        # Verify workshops table exists
+        print("[DB] Verifying workshops table exists...", flush=True)
+        async with conn.cursor() as verify_cur:
+            await verify_cur.execute("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = 'workshops'
+                )
+            """)
+            table_exists = await verify_cur.fetchone()
+            print(f"[DB] workshops table exists: {table_exists[0]}", flush=True)
+        
         # Build checklist JSON from selected indices
         selected = sorted(workflow.get('selected_indices', []))
         items = workflow.get('current_items', []) or []
@@ -150,6 +166,9 @@ async def insert_workshop(workflow: dict, user_id: int | None = None) -> int:
                         ('workshop', wid, idx, items[idx])
                     )
 
+        # Commit the transaction
+        await conn.commit()
+        print("[DB] ✓ Workshop inserted and committed", flush=True)
         return wid
     finally:
         await conn.close()
@@ -198,6 +217,9 @@ async def insert_service(workflow: dict, user_id: int | None = None) -> int:
                         ('service', sid, idx, items[idx])
                     )
 
+        # Commit the transaction
+        await conn.commit()
+        print("[DB] ✓ Service inserted and committed", flush=True)
         return sid
     finally:
         await conn.close()
