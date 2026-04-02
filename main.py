@@ -1882,17 +1882,38 @@ def main() -> None:
     print(f"📱 Token configured: {bool(token)}", flush=True)
     print("   (If polling fails, Render will automatically restart the service)", flush=True)
     
+    import signal
+    import sys
+    
+    # Trap signals to see if we're being killed externally
+    def signal_handler(sig, frame):
+        print(f"🛑 Received signal {sig} - stopping polling", flush=True)
+        logger.info(f"Received signal {sig}")
+        sys.exit(0)
+    
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+    
     try:
         print("⏳ Entering polling mode...", flush=True)
         logger.info("Bot polling started")
+        print("   [This should run continuously]", flush=True)
+        
+        # Run polling
         application.run_polling(allowed_updates=Update.ALL_TYPES, timeout=30, drop_pending_updates=True)
+        
+        # If we get here, polling ended (shouldn't happen in normal operation)
         print("⚠️  Polling ended normally (service will auto-restart)", flush=True)
-        logger.warning("Polling loop ended normally")
+        logger.warning("Polling loop ended normally - UNEXPECTED")
+        
     except KeyboardInterrupt:
         print("🛑 Bot interrupted by user", flush=True)
         logger.info("Bot interrupted by user")
     except Exception as e:
         print(f"❌ Polling error: {type(e).__name__}: {e}", flush=True)
+        import traceback
+        print("Traceback:", flush=True)
+        traceback.print_exc()
         print(f"   Render will automatically restart this service", flush=True)
         logger.exception(f"Polling error (service will restart): {e}")
 
