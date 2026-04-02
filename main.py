@@ -1882,18 +1882,41 @@ def main() -> None:
     print(f"📱 Token configured: {bool(token)}", flush=True)
     print("   (If polling fails, Render will automatically restart the service)", flush=True)
     
+    import time
+    polling_attempts = 0
+    
     try:
-        print("⏳ Entering polling mode...", flush=True)
-        logger.info("Bot polling started")
-        application.run_polling(allowed_updates=Update.ALL_TYPES, timeout=30)
-        print("⚠️  Polling ended (service will auto-restart)", flush=True)
+        while True:
+            polling_attempts += 1
+            start_time = time.time()
+            print(f"[POLL #{polling_attempts}] ⏳ Entering polling mode at {time.strftime('%H:%M:%S')}...", flush=True)
+            logger.info(f"Polling attempt #{polling_attempts}")
+            
+            try:
+                # Run polling with increased timeout to reduce reconnection issues
+                application.run_polling(allowed_updates=Update.ALL_TYPES, timeout=30, drop_pending_updates=True)
+                elapsed = time.time() - start_time
+                print(f"[POLL #{polling_attempts}] ⚠️  Polling ended normally after {elapsed:.1f}s", flush=True)
+                logger.warning(f"Polling loop ended normally after {elapsed:.1f}s - restarting in 5s")
+                
+                # Wait before restarting polling
+                print(f"[POLL #{polling_attempts}] ⏱️  Waiting 5s before restart...", flush=True)
+                time.sleep(5)
+                
+            except KeyboardInterrupt:
+                print(f"[POLL #{polling_attempts}] 🛑 Interrupted by user", flush=True)
+                logger.info("Bot interrupted by user")
+                raise
+            except Exception as e:
+                elapsed = time.time() - start_time
+                print(f"[POLL #{polling_attempts}] ❌ Error after {elapsed:.1f}s: {type(e).__name__}: {e}", flush=True)
+                logger.exception(f"Polling error (attempt {polling_attempts}): {e}")
+                print(f"[POLL #{polling_attempts}] ⏱️  Waiting 10s before restart...", flush=True)
+                time.sleep(10)
+                
     except KeyboardInterrupt:
-        print("🛑 Bot interrupted by user", flush=True)
-        logger.info("Bot interrupted by user")
-    except Exception as e:
-        print(f"❌ Polling error: {type(e).__name__}: {e}", flush=True)
-        print(f"   Render will automatically restart this service", flush=True)
-        logger.exception(f"Polling error (service will restart): {e}")
+        print("🛑 Bot interrupted - exiting", flush=True)
+        logger.info("Bot interrupted - exiting")
 
 
 if __name__ == '__main__':
