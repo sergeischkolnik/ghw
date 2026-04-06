@@ -11,19 +11,34 @@ A simple Telegram bot that helps workers follow company workflows while collecti
 
 ### 2. Install Dependencies
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-bot.txt
 ```
 
 ### 3. Configure the Bot
-Open `main.py` and replace `'YOUR_BOT_TOKEN'` with your actual bot token:
-```python
-application = Application.builder().token("YOUR_ACTUAL_TOKEN_HERE").build()
+Create a `.env` file with:
+```env
+TELEGRAM_TOKEN=your_bot_token
+DATABASE_URL=postgresql://user:password@host:5432/dbname
 ```
+
+`DATABASE_URL` and `TELEGRAM_TOKEN` are required at startup.
 
 ### 4. Run the Bot
 ```bash
 python main.py
 ```
+
+## Render Deployment Checklist
+
+1. Service type: Web service.
+2. Start command: `python -u main.py`.
+3. Build command: `bash build.sh`.
+4. Required env vars in Render:
+	- `TELEGRAM_TOKEN`
+	- `DATABASE_URL`
+5. Verify health endpoint returns 200:
+	- `/health`
+6. Verify logs show polling supervisor running continuously.
 
 ## Current Features
 - `/start` command - Initial greeting

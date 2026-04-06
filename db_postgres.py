@@ -253,3 +253,72 @@ async def insert_workflow_with_retry(workflow: dict, user_id: int | None = None,
                 _time.sleep(delay)
     # all attempts failed
     raise last_exc
+
+
+def _cursor_columns(description) -> list[str]:
+    """Return a list of column names from a psycopg cursor description."""
+    if not description:
+        return []
+    columns = []
+    for item in description:
+        # psycopg3 exposes .name, older tuples expose index 0.
+        name = getattr(item, 'name', None)
+        if name is None and isinstance(item, tuple) and item:
+            name = item[0]
+        columns.append(name)
+    return columns
+
+
+def get_components_sync():
+    """Compatibility hook for main.py; components are currently loaded from JSON."""
+    return None
+
+
+def get_clients_sync() -> list[str]:
+    """Compatibility hook for main.py; clients are currently loaded from JSON."""
+    return []
+
+
+async def get_recent_taller_outputs(limit: int = 50) -> list[dict]:
+    """Return recent records from the workshops table."""
+    conn = await get_db_conn()
+    try:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                """
+                SELECT id, user_id, machine_name, machine_num, component_id, subcomponent_id,
+                       start_ts, end_ts, comment, panas, data_json, created_at
+                FROM workshops
+                ORDER BY id DESC
+                LIMIT %s
+                """,
+                (limit,),
+            )
+            rows = await cur.fetchall()
+            cols = _cursor_columns(cur.description)
+            return [dict(zip(cols, row)) for row in rows]
+    finally:
+        await conn.close()
+
+
+async def get_recent_servicio_outputs(limit: int = 50) -> list[dict]:
+    """Return recent records from the services table."""
+    conn = await get_db_conn()
+    try:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                """
+                SELECT id, user_id, client_id, service_id, subservice_id, details_json,
+                       horometro_start, horometro_end, hectareas, comment, panas,
+                       start_ts, end_ts, data_json, created_at
+                FROM services
+                ORDER BY id DESC
+                LIMIT %s
+                """,
+                (limit,),
+            )
+            rows = await cur.fetchall()
+            cols = _cursor_columns(cur.description)
+            return [dict(zip(cols, row)) for row in rows]
+    finally:
+        await conn.close()

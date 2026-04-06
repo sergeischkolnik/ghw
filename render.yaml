@@ -8,4 +8,6 @@ services:
     envVars:
       - key: TELEGRAM_TOKEN
         scope: run
+      - key: DATABASE_URL
+        scope: run
 

@@ -1697,11 +1697,23 @@ def main() -> None:
     environment = os.getenv('ENVIRONMENT', 'dev').lower()
     print(f"📍 Environment: {environment.upper()}", flush=True)
     print("=" * 50, flush=True)
+
+    # Validate required environment variables up front.
+    print("[1/5] Validating environment variables...", flush=True)
+    database_url = os.getenv('DATABASE_URL')
+    token = os.getenv("TELEGRAM_TOKEN")
+
+    if not database_url:
+        raise RuntimeError("DATABASE_URL environment variable is required")
+    if not token:
+        raise RuntimeError("TELEGRAM_TOKEN environment variable is required")
+
+    print("[✓] Required environment variables found", flush=True)
     
     # Initialize database - CRITICAL, must succeed
     try:
-        print("[1/5] Initializing database...", flush=True)
-        print(f"      DATABASE_URL: {bool(os.getenv('DATABASE_URL'))}", flush=True)
+        print("[2/5] Initializing database...", flush=True)
+        print(f"      DATABASE_URL: {bool(database_url)}", flush=True)
         asyncio.run(db.init_db())
         print("[✓] Database initialized successfully", flush=True)
     except Exception as e:
@@ -1712,13 +1724,12 @@ def main() -> None:
         raise
 
     # Get token from environment variable
-    print("[2/5] Creating Telegram application...", flush=True)
-    token = os.getenv("TELEGRAM_TOKEN", "8671366249:AAH5hTmnL4E4BYiWA7rMUYsQlGkfJL7ZmH0")
+    print("[3/5] Creating Telegram application...", flush=True)
     application = Application.builder().token(token).build()
     print("[✓] Application created", flush=True)
 
     # simple commands
-    print("[3/5] Adding command handlers...", flush=True)
+    print("[4/5] Adding command handlers...", flush=True)
     application.add_handler(CommandHandler("workflow", workflow_start))
     application.add_handler(CommandHandler("export_workflows", export_workflows))
     application.add_handler(CommandHandler("simulate_taller", simulate_taller))
@@ -1865,7 +1876,7 @@ def main() -> None:
     application.add_handler(conv_handler)
 
     application.add_error_handler(error_handler)
-    print("[4/5] Setting up event loop...", flush=True)
+    print("[5/5] Setting up event loop and health checks...", flush=True)
     # Ensure an event loop is available on Python 3.10+ where get_event_loop() may
     # raise if no loop is set in the main thread. Create and set one if needed.
     try:
@@ -1874,48 +1885,45 @@ def main() -> None:
         asyncio.set_event_loop(asyncio.new_event_loop())
 
     # Start health check server for Render
-    print("[5/5] Starting health check server...", flush=True)
+    print("      Starting health check server...", flush=True)
     start_health_server()
     print("[✓] All systems initialized", flush=True)
     
-    print("🚀 Bot is starting polling...", flush=True)
+    print("🚀 Bot is starting polling supervisor...", flush=True)
     print(f"📱 Token configured: {bool(token)}", flush=True)
-    print("   (If polling fails, Render will automatically restart the service)", flush=True)
-    
-    import signal
-    import sys
-    
-    # Trap signals to see if we're being killed externally
-    def signal_handler(sig, frame):
-        print(f"🛑 Received signal {sig} - stopping polling", flush=True)
-        logger.info(f"Received signal {sig}")
-        sys.exit(0)
-    
-    signal.signal(signal.SIGTERM, signal_handler)
-    signal.signal(signal.SIGINT, signal_handler)
-    
-    try:
-        print("⏳ Entering polling mode...", flush=True)
-        logger.info("Bot polling started")
-        print("   [This should run continuously]", flush=True)
-        
-        # Run polling
-        application.run_polling(allowed_updates=Update.ALL_TYPES, timeout=30, drop_pending_updates=True)
-        
-        # If we get here, polling ended (shouldn't happen in normal operation)
-        print("⚠️  Polling ended normally (service will auto-restart)", flush=True)
-        logger.warning("Polling loop ended normally - UNEXPECTED")
-        
-    except KeyboardInterrupt:
-        print("🛑 Bot interrupted by user", flush=True)
-        logger.info("Bot interrupted by user")
-    except Exception as e:
-        print(f"❌ Polling error: {type(e).__name__}: {e}", flush=True)
-        import traceback
-        print("Traceback:", flush=True)
-        traceback.print_exc()
-        print(f"   Render will automatically restart this service", flush=True)
-        logger.exception(f"Polling error (service will restart): {e}")
+    print("   (Polling will auto-retry on transient failures)", flush=True)
+
+    import time
+
+    backoff_seconds = 5
+    max_backoff_seconds = 60
+
+    while True:
+        try:
+            print("⏳ Entering polling mode...", flush=True)
+            logger.info("Bot polling started")
+            print("   [This should run continuously]", flush=True)
+
+            application.run_polling(
+                allowed_updates=Update.ALL_TYPES,
+                timeout=30,
+                drop_pending_updates=True,
+                close_loop=False,
+            )
+
+            print("⚠️  Polling ended unexpectedly", flush=True)
+            logger.warning("Polling loop ended unexpectedly")
+        except KeyboardInterrupt:
+            print("🛑 Bot interrupted by user", flush=True)
+            logger.info("Bot interrupted by user")
+            break
+        except Exception as e:
+            print(f"❌ Polling error: {type(e).__name__}: {e}", flush=True)
+            logger.exception("Polling error: %s", e)
+
+        print(f"🔁 Restarting polling in {backoff_seconds} seconds...", flush=True)
+        time.sleep(backoff_seconds)
+        backoff_seconds = min(backoff_seconds * 2, max_backoff_seconds)
 
 
 if __name__ == '__main__':
