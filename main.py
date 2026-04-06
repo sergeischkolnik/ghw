@@ -5,6 +5,8 @@ import asyncio
 import db_postgres as db
 import datetime
 import threading
+import time
+import urllib.request
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler, CallbackQueryHandler
@@ -29,6 +31,7 @@ logger = logging.getLogger(__name__)
 
 # Global health check counter for monitoring
 health_check_count = 0
+self_ping_count = 0
 
 # Simple HTTP handler for Render health checks
 class HealthCheckHandler(BaseHTTPRequestHandler):
@@ -66,6 +69,44 @@ def start_health_server():
     except Exception as e:
         print(f"❌ Failed to start health check server: {e}", flush=True)
         logger.exception(f"Failed to start health check server: {e}")
+
+
+def start_self_ping_loop():
+    """Keep web services active by periodically hitting their public health endpoint."""
+    enabled = os.getenv('SELF_PING_ENABLED', '1').lower()
+    if enabled in ('0', 'false', 'no'):
+        print("ℹ️ Self-ping loop disabled by SELF_PING_ENABLED", flush=True)
+        return
+
+    base_url = (os.getenv('SELF_PING_URL') or os.getenv('RENDER_EXTERNAL_URL') or '').strip()
+    if not base_url:
+        print("ℹ️ Self-ping loop not started (SELF_PING_URL/RENDER_EXTERNAL_URL missing)", flush=True)
+        return
+
+    try:
+        interval_seconds = max(30, int(os.getenv('SELF_PING_INTERVAL_SECONDS', '240')))
+    except ValueError:
+        interval_seconds = 240
+
+    health_url = f"{base_url.rstrip('/')}/health"
+
+    def _ping_loop() -> None:
+        global self_ping_count
+        while True:
+            time.sleep(interval_seconds)
+            self_ping_count += 1
+            try:
+                with urllib.request.urlopen(health_url, timeout=15) as response:
+                    status = response.getcode()
+                print(f"[PING #{self_ping_count}] {health_url} -> {status}", flush=True)
+            except Exception as e:
+                print(f"[PING #{self_ping_count}] failed: {e}", flush=True)
+                logger.warning("Self-ping failed: %s", e)
+
+    thread = threading.Thread(target=_ping_loop, daemon=True)
+    thread.start()
+    print(f"✅ Self-ping loop started every {interval_seconds}s to {health_url}", flush=True)
+    logger.info("Self-ping loop started every %ss to %s", interval_seconds, health_url)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1887,43 +1928,36 @@ def main() -> None:
     # Start health check server for Render
     print("      Starting health check server...", flush=True)
     start_health_server()
+    print("      Starting self-ping loop...", flush=True)
+    start_self_ping_loop()
     print("[✓] All systems initialized", flush=True)
     
     print("🚀 Bot is starting polling supervisor...", flush=True)
     print(f"📱 Token configured: {bool(token)}", flush=True)
-    print("   (Polling will auto-retry on transient failures)", flush=True)
+    print("   (If polling stops, process exits so Render restarts it cleanly)", flush=True)
 
-    import time
+    try:
+        print("⏳ Entering polling mode...", flush=True)
+        logger.info("Bot polling started")
+        print("   [This should run continuously]", flush=True)
 
-    backoff_seconds = 5
-    max_backoff_seconds = 60
+        application.run_polling(
+            allowed_updates=Update.ALL_TYPES,
+            timeout=30,
+            drop_pending_updates=True,
+            bootstrap_retries=-1,
+            close_loop=False,
+        )
+    except KeyboardInterrupt:
+        print("🛑 Bot interrupted by user", flush=True)
+        logger.info("Bot interrupted by user")
+        return
+    except Exception as e:
+        print(f"❌ Polling error: {type(e).__name__}: {e}", flush=True)
+        logger.exception("Polling error: %s", e)
+        raise
 
-    while True:
-        try:
-            print("⏳ Entering polling mode...", flush=True)
-            logger.info("Bot polling started")
-            print("   [This should run continuously]", flush=True)
-
-            application.run_polling(
-                allowed_updates=Update.ALL_TYPES,
-                timeout=30,
-                drop_pending_updates=True,
-                close_loop=False,
-            )
-
-            print("⚠️  Polling ended unexpectedly", flush=True)
-            logger.warning("Polling loop ended unexpectedly")
-        except KeyboardInterrupt:
-            print("🛑 Bot interrupted by user", flush=True)
-            logger.info("Bot interrupted by user")
-            break
-        except Exception as e:
-            print(f"❌ Polling error: {type(e).__name__}: {e}", flush=True)
-            logger.exception("Polling error: %s", e)
-
-        print(f"🔁 Restarting polling in {backoff_seconds} seconds...", flush=True)
-        time.sleep(backoff_seconds)
-        backoff_seconds = min(backoff_seconds * 2, max_backoff_seconds)
+    raise RuntimeError("Polling stopped unexpectedly; forcing restart")
 
 
 if __name__ == '__main__':
